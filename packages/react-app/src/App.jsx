@@ -293,6 +293,15 @@ function App(props) {
         <Menu.Item key="/debug">
           <Link to="/debug">Debug Contracts</Link>
         </Menu.Item>
+        <Menu.Item key="/nft">
+          <Link to="/nft">NFT</Link>
+        </Menu.Item>
+        <Menu.Item key="/soc">
+          <Link to="/spc">Some Coin</Link>
+        </Menu.Item>
+        <Menu.Item key="/sot">
+          <Link to="/sot">Some Token</Link>
+        </Menu.Item>
         <Menu.Item key="/hints">
           <Link to="/hints">Hints</Link>
         </Menu.Item>
@@ -318,9 +327,32 @@ function App(props) {
                 this <Contract/> component will automatically parse your ABI
                 and give you a form to interact with it locally
             */}
-
+        </Route>
+        <Route path="/nft">
           <Contract
-            name="YourContract"
+            name="SomeNFT"
+            price={price}
+            signer={userSigner}
+            provider={localProvider}
+            address={address}
+            blockExplorer={blockExplorer}
+            contractConfig={contractConfig}
+          />
+        </Route>
+        <Route path="/soc">
+          <Contract
+            name="SomeCoin"
+            price={price}
+            signer={userSigner}
+            provider={localProvider}
+            address={address}
+            blockExplorer={blockExplorer}
+            contractConfig={contractConfig}
+          />
+        </Route>
+        <Route path="/sot">
+          <Contract
+            name="SomeToken"
             price={price}
             signer={userSigner}
             provider={localProvider}

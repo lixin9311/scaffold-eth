@@ -2,6 +2,8 @@ require("dotenv").config();
 const { utils } = require("ethers");
 const fs = require("fs");
 const chalk = require("chalk");
+const { task } = require("hardhat/config");
+require('solidity-coverage');
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
@@ -12,6 +14,7 @@ require("hardhat-abi-exporter");
 
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
+require("@nomiclabs/hardhat-web3");
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
@@ -67,11 +70,9 @@ module.exports = {
   networks: {
     localhost: {
       url: "http://localhost:8545",
-      /*      
-        notice no mnemonic here? it will just use account 0 of the hardhat node to deploy
-        (you can put in a mnemonic here to set the deployer locally)
-      
-      */
+      accounts: {
+        mnemonic: 'test test test test test test test test test test test junk',
+      },
     },
     rinkeby: {
       url: "https://rinkeby.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
@@ -269,7 +270,7 @@ module.exports = {
   solidity: {
     compilers: [
       {
-        version: "0.8.4",
+        version: "0.8.14",
         settings: {
           optimizer: {
             enabled: true,
@@ -363,20 +364,20 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
       deployerWallet = deployerWallet.connect(ethers.provider);
       console.log(
         "💵 Sending " +
-          amount +
-          " ETH to " +
-          randomWallet.address +
-          " using deployer account"
+        amount +
+        " ETH to " +
+        randomWallet.address +
+        " using deployer account"
       );
       const sendresult = await deployerWallet.sendTransaction(tx);
       console.log("\n" + url + "/pk#" + privateKey + "\n");
     } else {
       console.log(
         "💵 Sending " +
-          amount +
-          " ETH to " +
-          randomWallet.address +
-          " using local node"
+        amount +
+        " ETH to " +
+        randomWallet.address +
+        " using local node"
       );
       console.log("\n" + url + "/pk#" + privateKey + "\n");
       return send(ethers.provider.getSigner(), tx);
@@ -406,8 +407,8 @@ task(
       "0x" + EthUtil.privateToAddress(wallet._privKey).toString("hex");
     console.log(
       "🔐 Account Generated as " +
-        address +
-        " and set as mnemonic in packages/hardhat"
+      address +
+      " and set as mnemonic in packages/hardhat"
     );
     console.log(
       "💬 Use 'yarn run account' to get more information about the deployment account."
@@ -466,12 +467,12 @@ task(
 
     console.log(
       "⛏  Account Mined as " +
-        address +
-        " and set as mnemonic in packages/hardhat"
+      address +
+      " and set as mnemonic in packages/hardhat"
     );
     console.log(
       "📜 This will create the first contract: " +
-        chalk.magenta("0x" + contract_address)
+      chalk.magenta("0x" + contract_address)
     );
     console.log(
       "💬 Use 'yarn run account' to get more information about the deployment account."
@@ -620,4 +621,70 @@ task("send", "Send ETH")
     debug(JSON.stringify(txRequest, null, 2));
 
     return send(fromSigner, txRequest);
+  });
+
+task("deposit", "deposit some thing to delegatee")
+  .addParam("from", "From address or account index")
+  .addParam("token", "soc, sot, nft")
+  .addParam("amount", "amount or token id")
+  .setAction(async (taskArgs, { networkm, ethers }) => {
+    const from = await addr(ethers, taskArgs.from);
+    debug(`Normalized from address: ${from}`);
+    const fromSigner = await ethers.provider.getSigner(from);
+    const to = await addr(ethers, 17);
+    debug(`Normalized to address: ${to}`);
+    switch (taskArgs.token) {
+      case "soc":
+        const somecoin = await ethers.getContract("SomeCoin");
+        const somecointx = await somecoin.connect(fromSigner).transfer(to, ethers.utils.parseEther(taskArgs.amount));
+        await somecointx.wait();
+        console.log(`deposit ${taskArgs.amount} soc`);
+        break;
+      case "sot":
+        const sometoken = await ethers.getContract("SomeToken");
+        const sometokentx = await sometoken.connect(fromSigner).transfer(to, ethers.utils.parseEther(taskArgs.amount));
+        await sometokentx.wait();
+        console.log(`deposit ${taskArgs.amount} sot`);
+        break;
+      case "nft":
+        const somenft = await ethers.getContract("SomeBlox");
+        const somenfttx = await somenft.connect(fromSigner).transferFrom(from, to, taskArgs.amount);
+        await somenfttx.wait();
+        console.log(`deposit nft #${taskArgs.amount}`);
+        break;
+    }
+  });
+
+task("withdraw", "withdraw some thing from delegatee")
+  .addParam("to", "to address or account index")
+  .addParam("token", "soc, sot, nft")
+  .addParam("amount", "amount or token id")
+  .setAction(async (taskArgs, { networkm, ethers }) => {
+    const delegatee = await addr(ethers, 17);
+    debug(`Normalized delegatee address: ${delegatee}`);
+    const admin = await addr(ethers, 18);
+    debug(`Normalized admin address: ${admin}`);
+    const adminSigner = await ethers.provider.getSigner(admin);
+    const to = await addr(ethers, taskArgs.to);
+    debug(`Normalized to address: ${to}`);
+    switch (taskArgs.token) {
+      case "soc":
+        const somecoin = await ethers.getContract("SomeCoin");
+        const somecointx = await somecoin.connect(adminSigner).transferFrom(delegatee, to, ethers.utils.parseEther(taskArgs.amount));
+        await somecointx.wait();
+        console.log(`withdraw ${taskArgs.amount} soc`);
+        break;
+      case "sot":
+        const sometoken = await ethers.getContract("SomeToken");
+        const sometokentx = await sometoken.connect(adminSigner).transfer(delegatee, to, ethers.utils.parseEther(taskArgs.amount));
+        await sometokentx.wait();
+        console.log(`withdraw ${taskArgs.amount} sot`);
+        break;
+      case "nft":
+        const somenft = await ethers.getContract("SomeBlox");
+        const somenfttx = await somenft.connect(adminSigner).transferFrom(delegatee, to, taskArgs.amount);
+        await somenfttx.wait();
+        console.log(`withdraw nft #${taskArgs.amount}`);
+        break;
+    }
   });
